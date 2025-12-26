@@ -30,6 +30,165 @@ bool getLineIntersection(sf::Vector2f p1, sf::Vector2f p2, sf::Vector2f p3, sf::
     return false;
 }
 
+struct Rocket {
+    sf::Vector2f velocity = {0.f, 0.f}; // Wektor zamiast osobnych floatów
+    sf::Sprite sprite;
+    sf::Sprite fireSprite;
+    std::vector<LaserReading> lasers;   // Rakieta trzyma SWOJE odczyty
+    bool dead = false;
+    bool isThrusting = false;
+
+    // Konfiguracja
+    const float gravity = 0.02f;
+    const float thrustPower = 0.1f;
+    const float rotationSpeed = 1.0f;
+    const float maxLaserDist = 400.0f;
+    std::vector<float> laserAngles = { -90.f, -45.f, 0.f, 45.f, 90.f };
+
+    Rocket(const sf::Texture& shipTexture, const sf::Texture& fireTexture)
+        : sprite(shipTexture), fireSprite(fireTexture)
+    {
+        lasers.resize(laserAngles.size());
+
+        // Konfiguracja ognia (raz, przy tworzeniu)
+        fireSprite.setOrigin({ 8.f, 2.f }); // Środek ognia
+        fireSprite.setScale({ 2.0f, 2.0f });
+    }
+
+    void reset(sf::Vector2f startPosition) {
+        dead = false;
+        isThrusting = false;
+        sprite.setPosition(startPosition);
+        sprite.setRotation(sf::degrees(0.f));
+        velocity = {0.f, 0.f};
+    }
+
+    // Funkcja ruchu i fizyki
+    void update(bool rotateLeft, bool rotateRight, bool thrust) {
+        if (dead) return;
+
+        isThrusting = thrust;
+
+        // 1. Obroty
+        if (rotateLeft) sprite.rotate(sf::degrees(-rotationSpeed));
+        if (rotateRight) sprite.rotate(sf::degrees(rotationSpeed));
+
+        // 2. Grawitacja
+        velocity.y += gravity;
+
+        // 3. Ciąg (Silnik)
+        if (thrust) {
+            float angleRad = (sprite.getRotation().asDegrees() - 90.f) * 3.14159f / 180.f;
+            velocity.x += std::cos(angleRad) * thrustPower; // thrust jest ujemny w Twoim kodzie, tutaj zakładam power jako dodatni wektor
+            velocity.y += std::sin(angleRad) * thrustPower;
+
+            // --- OBLICZANIE POZYCJI OGNIA (Wewnątrz rakiety!) ---
+            float offsetDist = 32.0f; // Jak daleko za rakietą ma być ogień
+            // Odejmujemy cos/sin, żeby ogień był Z TYŁU (przeciwnie do zwrotu rakiety)
+            float fireX = sprite.getPosition().x - std::cos(angleRad) * offsetDist;
+            float fireY = sprite.getPosition().y - std::sin(angleRad) * offsetDist;
+
+            fireSprite.setPosition({ fireX, fireY });
+            fireSprite.setRotation(sprite.getRotation());
+        }
+
+        // 4. Aplikacja ruchu
+        sprite.move(velocity);
+
+        // 5. Tłumienie (opór powietrza)
+        velocity *= 0.99f;
+    }
+
+    // Funkcja "patrzenia" (Lasery)
+    void sense(const std::vector<sf::RectangleShape>& obstacles) {
+        if (dead) return;
+
+        sf::Vector2f origin = sprite.getPosition();
+        float baseAngle = sprite.getRotation().asDegrees() - 90.f;
+
+        for (size_t i = 0; i < laserAngles.size(); ++i) {
+            float rad = (baseAngle + laserAngles[i]) * 3.14159f / 180.f;
+
+            sf::Vector2f rayEnd;
+            rayEnd.x = origin.x + std::cos(rad) * maxLaserDist;
+            rayEnd.y = origin.y + std::sin(rad) * maxLaserDist;
+
+            float closestDist = maxLaserDist;
+            sf::Vector2f closestPoint = rayEnd;
+            bool hitSomething = false;
+
+            // Sprawdzanie przeszkód (Twoja logika przeniesiona tutaj)
+            for (const auto& p : obstacles) {
+                sf::FloatRect b = p.getGlobalBounds();
+                // ... (Tutaj wstawiasz logikę getLineIntersection dla 4 ścian) ...
+                // Dla czytelności skróciłem ten fragment, ale kopiujesz go z maina
+                // Używając getLineIntersection zdefiniowanego globalnie
+                std::vector<std::pair<sf::Vector2f, sf::Vector2f>> walls = {
+                     {{b.position.x, b.position.y}, {b.position.x + b.size.x, b.position.y}},
+                     {{b.position.x + b.size.x, b.position.y}, {b.position.x + b.size.x, b.position.y + b.size.y}},
+                     {{b.position.x + b.size.x, b.position.y + b.size.y}, {b.position.x, b.position.y + b.size.y}},
+                     {{b.position.x, b.position.y + b.size.y}, {b.position.x, b.position.y}}
+                };
+
+                sf::Vector2f hitPoint;
+                for(auto& wall : walls){
+                    if(getLineIntersection(origin, rayEnd, wall.first, wall.second, hitPoint)){
+                         float dist = std::sqrt(std::pow(hitPoint.x - origin.x, 2) + std::pow(hitPoint.y - origin.y, 2));
+                         if(dist < closestDist){
+                             closestDist = dist;
+                             closestPoint = hitPoint;
+                             hitSomething = true;
+                         }
+                    }
+                }
+            }
+            // Zapisujemy wynik W STRUKTURZE
+            lasers[i] = { closestPoint, closestDist, hitSomething };
+        }
+    }
+
+    // Funkcja sprawdzania kolizji (śmierć)
+    void checkCollision(const std::vector<sf::RectangleShape>& obstacles) {
+        if (dead) return;
+        for (const auto& p : obstacles) {
+            if (sprite.getGlobalBounds().findIntersection(p.getGlobalBounds())) {
+                dead = true; // Rakieta oznacza samą siebie jako martwą
+            }
+        }
+    }
+
+    // Helper do rysowania laserów
+    void drawLasers(sf::RenderWindow& win) {
+        for (const auto& laser : lasers) {
+             sf::Color color = laser.hit ? sf::Color::Red : sf::Color(200, 200, 200);
+             sf::Vertex line[] = {
+                sf::Vertex{sprite.getPosition(), color},
+                sf::Vertex{laser.endPoint, color}
+             };
+             win.draw(line, 2, sf::PrimitiveType::Lines);
+        }
+    }
+    void draw(sf::RenderWindow& win) {
+        // 1. Rysuj ogień (tylko jak wciśnięty gaz i nie martwa)
+        if (isThrusting && !dead) {
+            win.draw(fireSprite);
+        }
+
+        // 2. Rysuj rakietę
+        win.draw(sprite);
+
+        // 3. Rysuj lasery
+        for (const auto& laser : lasers) {
+            sf::Color color = laser.hit ? sf::Color::Red : sf::Color(200, 200, 200);
+            sf::Vertex line[] = {
+                sf::Vertex{sprite.getPosition(), color},
+                sf::Vertex{laser.endPoint, color}
+            };
+            win.draw(line, 2, sf::PrimitiveType::Lines);
+        }
+    }
+};
+
 int main()
 {
     // config
@@ -38,13 +197,6 @@ int main()
     auto window = sf::RenderWindow(sf::VideoMode({ 1000u, 1000u }), "Rakietowy algorytm genetyczny");
     window.setFramerateLimit(144);
     sf::Font font("../../src/Roboto_Condensed-Medium.ttf"); // Upewnij się, że ścieżka jest poprawna
-
-    // fizyka
-    float velocityY = 0.f;
-    float velocityX = 0.f;
-    const float gravity = 0.02f;
-    const float thrust = -0.1f;
-    const float rotationSpeed = 1.0f;
 
     // tekst
     sf::Text text(font);
@@ -90,37 +242,21 @@ int main()
     dodajPrzeszkode({ 10.f, 1000.f }, { 990.f, 0.f });   // Prawa ściana
 
     sf::Texture texture;
-    if (!texture.loadFromFile("../../src/rakieta.png")) {
-        // Fallback jeśli brak tekstury (zastępczy kształt)
-        // return -1;
-    }
-
-    sf::Sprite sprite(texture);
-    sf::FloatRect spriteBounds = sprite.getLocalBounds();
-    sprite.setOrigin(spriteBounds.getCenter());
-    sprite.setPosition({ 900.f, 900.f });
-    sprite.setScale({ 2.0f, 2.0f });
-
+    if (!texture.loadFromFile("../../src/rakieta.png")) {}
     sf::Texture fireTexture;
-    bool hasFireTexture = fireTexture.loadFromFile("../../src/ogien.png");
-    sf::Sprite fireSprite(fireTexture);
+    if (!fireTexture.loadFromFile("../../src/ogien.png")) {}
 
-    if (hasFireTexture) {
-        fireSprite.setOrigin({ 8.f, 2.f });
-        fireSprite.setScale({ 2.0f, 2.0f });
-    }
+    Rocket gracz(texture, fireTexture);
 
-    // KONFIGURACJA LASERÓW
-    // Kąty względem rakiety (0 to prosto, -90 to lewo, 90 to prawo)
-    std::vector<float> laserAngles = { -90.f, -45.f, 0.f, 45.f, 90.f };
-    const float maxLaserDist = 400.0f; // Maksymalny zasięg lasera
-    std::vector<LaserReading> laserReadings(laserAngles.size()); // Tu trzymamy wyniki
+    sf::Vector2f startPos = { 900.f, 900.f };
+    sf::FloatRect spriteBounds = gracz.sprite.getLocalBounds();
+    gracz.sprite.setOrigin(spriteBounds.getCenter());
+    gracz.sprite.setScale({ 2.0f, 2.0f });
+
+    gracz.reset(startPos);
 
     while (window.isOpen())
     {
-        for (int i = 0; i < laserReadings.size(); i++) {
-            std::cout << laserReadings[i].distance << std::endl;
-        }
         while (const std::optional event = window.pollEvent())
         {
             if (event->is<sf::Event::Closed>())
@@ -136,89 +272,19 @@ int main()
             }
         }
 
-        bool drawFire = false;
-
         if (nauka) {
-            // Sterowanie
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)) {
-                sprite.rotate(sf::degrees(-rotationSpeed));
-            }
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)) {
-                sprite.rotate(sf::degrees(rotationSpeed));
-            }
-            velocityY += gravity;
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)) {
-                // SFML 0 stopni to prawo, Twoja grafika 0 stopni to góra, stąd -90
-                float angleInRadians = (sprite.getRotation().asDegrees() - 90.f) * 3.14159f / 180.f;
-                velocityX += std::cos(angleInRadians) * std::abs(thrust);
-                velocityY += std::sin(angleInRadians) * std::abs(thrust);
+            // 1. Pobieranie wejścia (w przyszłości tutaj wepniesz sieć neuronową)
+            bool left = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left);
+            bool right = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right);
+            bool space = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space);
 
-                drawFire = true;
-                float offsetDist = 32.0f;
-                float fireX = sprite.getPosition().x - std::cos(angleInRadians) * offsetDist;
-                float fireY = sprite.getPosition().y - std::sin(angleInRadians) * offsetDist;
-                fireSprite.setPosition({ fireX, fireY });
-                fireSprite.setRotation(sprite.getRotation());
-            }
-            sprite.move({ velocityX, velocityY });
+            // 2. Aktualizacja rakiety (cała logika w środku!)
+            gracz.update(left, right, space);
+            gracz.checkCollision(przeszkody);
+            gracz.sense(przeszkody); // Rakieta "rozgląda się"
 
-            velocityX *= 0.99f;
-            velocityY *= 0.99f;
-
-            // Kolizja gracza
-            for (const auto& p : przeszkody) {
-                if (sprite.getGlobalBounds().findIntersection(p.getGlobalBounds())) {
-                    sprite.setPosition({ 900.f, 900.f });
-                    sprite.setRotation(sf::degrees(0.f));
-                    velocityX = 0.f;
-                    velocityY = 0.f;
-                }
-            }
-
-            // --- OBLICZANIE LASERÓW ---
-            sf::Vector2f origin = sprite.getPosition();
-            float baseAngle = sprite.getRotation().asDegrees() - 90.f; // Kąt przodu rakiety
-
-            for (size_t i = 0; i < laserAngles.size(); ++i) {
-                float rad = (baseAngle + laserAngles[i]) * 3.14159f / 180.f;
-
-                // Domyślny koniec lasera (maksymalny zasięg)
-                sf::Vector2f rayEnd;
-                rayEnd.x = origin.x + std::cos(rad) * maxLaserDist;
-                rayEnd.y = origin.y + std::sin(rad) * maxLaserDist;
-
-                float closestDist = maxLaserDist;
-                sf::Vector2f closestPoint = rayEnd;
-                bool hitSomething = false;
-
-                // Sprawdź każdą przeszkodę
-                for (const auto& p : przeszkody) {
-                    sf::FloatRect b = p.getGlobalBounds();
-
-                    // Definicja 4 krawędzi prostokąta przeszkody
-                    std::vector<std::pair<sf::Vector2f, sf::Vector2f>> walls = {
-                        {{b.position.x, b.position.y}, {b.position.x + b.size.x, b.position.y}}, // Góra
-                        {{b.position.x + b.size.x, b.position.y}, {b.position.x + b.size.x, b.position.y + b.size.y}}, // Prawa
-                        {{b.position.x + b.size.x, b.position.y + b.size.y}, {b.position.x, b.position.y + b.size.y}}, // Dół
-                        {{b.position.x, b.position.y + b.size.y}, {b.position.x, b.position.y}} // Lewa
-                    };
-
-                    sf::Vector2f hitPoint;
-                    for (const auto& wall : walls) {
-                        if (getLineIntersection(origin, rayEnd, wall.first, wall.second, hitPoint)) {
-                            // Oblicz dystans do trafienia
-                            float dist = std::sqrt(std::pow(hitPoint.x - origin.x, 2) + std::pow(hitPoint.y - origin.y, 2));
-                            if (dist < closestDist) {
-                                closestDist = dist;
-                                closestPoint = hitPoint;
-                                hitSomething = true;
-                            }
-                        }
-                    }
-                }
-
-                // Zapisz wynik dla tego lasera
-                laserReadings[i] = { closestPoint, closestDist, hitSomething };
+            if (gracz.dead) {
+                gracz.reset(startPos);
             }
         }
 
@@ -230,25 +296,10 @@ int main()
             window.draw(buttonText);
         }
         if (nauka) {
-            window.draw(sprite);
             window.draw(c);
-            if (drawFire && hasFireTexture) {
-                window.draw(fireSprite);
-            }
+            gracz.draw(window);
             for (const auto& p : przeszkody) window.draw(p);
-
-            // Rysowanie linii laserów
-            for (const auto& laser : laserReadings) {
-                sf::Color color = laser.hit ? sf::Color::Red : sf::Color(200, 200, 200); // Czerwony jak trafi, szary jak nie
-
-                sf::Vertex line[] = {
-                    sf::Vertex{sprite.getPosition(), color},
-                    sf::Vertex{laser.endPoint, color}
-                };
-                window.draw(line, 2, sf::PrimitiveType::Lines);
-            }
         }
-
         window.display();
     }
 }
