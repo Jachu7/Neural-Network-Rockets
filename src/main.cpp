@@ -2,7 +2,7 @@
 #include <cmath>
 #include <vector>
 #include <optional>
-#include <limits> // Potrzebne do nieskończoności
+#include <limits>
 #include <iostream>
 
 struct LaserReading {
@@ -31,19 +31,20 @@ bool getLineIntersection(sf::Vector2f p1, sf::Vector2f p2, sf::Vector2f p3, sf::
 }
 
 struct Rocket {
-    sf::Vector2f velocity = {0.f, 0.f}; // Wektor zamiast osobnych floatów
+    sf::Vector2f velocity = {0.f, 0.f};
     sf::Sprite sprite;
     sf::Sprite fireSprite;
     std::vector<LaserReading> lasers;   // Rakieta trzyma SWOJE odczyty
     bool dead = false;
     bool isThrusting = false;
 
+
     // Konfiguracja
     const float gravity = 0.02f;
     const float thrustPower = 0.1f;
     const float rotationSpeed = 1.0f;
     const float maxLaserDist = 400.0f;
-    std::vector<float> laserAngles = { -90.f, -45.f, 0.f, 45.f, 90.f };
+    std::vector<float> laserAngles = { -90.f, -45.f, 0.f, 45.f, 90.f, 180.f, 135.f, -135.f };
 
     Rocket(const sf::Texture& shipTexture, const sf::Texture& fireTexture)
         : sprite(shipTexture), fireSprite(fireTexture)
@@ -53,6 +54,10 @@ struct Rocket {
         // Konfiguracja ognia (raz, przy tworzeniu)
         fireSprite.setOrigin({ 8.f, 2.f }); // Środek ognia
         fireSprite.setScale({ 2.0f, 2.0f });
+
+        sf::FloatRect spriteBounds = sprite.getLocalBounds();
+        sprite.setOrigin(spriteBounds.getCenter());
+        sprite.setScale({ 2.0f, 2.0f });
     }
 
     void reset(sf::Vector2f startPosition) {
@@ -247,12 +252,7 @@ int main()
     if (!fireTexture.loadFromFile("../../src/ogien.png")) {}
 
     Rocket gracz(texture, fireTexture);
-
     sf::Vector2f startPos = { 900.f, 900.f };
-    sf::FloatRect spriteBounds = gracz.sprite.getLocalBounds();
-    gracz.sprite.setOrigin(spriteBounds.getCenter());
-    gracz.sprite.setScale({ 2.0f, 2.0f });
-
     gracz.reset(startPos);
 
     while (window.isOpen())
