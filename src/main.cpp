@@ -5,6 +5,8 @@
 #include <limits>
 #include <iostream>
 
+#include "siec/Neuron.h"
+
 struct LaserReading {
     sf::Vector2f endPoint; // Gdzie laser się kończy (do rysowania)
     float distance;        // Odległość (dla algorytmu genetycznego)
@@ -302,4 +304,11 @@ int main()
         }
         window.display();
     }
+
+    Neuron *n = new Neuron(20);
+    std::cout << "Value: " << n->getValue() << std::endl;
+    std::cout << "Activated value: " << n->getActiveValue() << std::endl;
+    std::cout << "Derived value: " << n->getDerivativeValue() << std::endl;
+
+
 }
