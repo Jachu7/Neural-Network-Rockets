@@ -12,6 +12,18 @@ FetchContent_Declare(SFML
     SYSTEM)
 FetchContent_MakeAvailable(SFML)
 
-add_executable(main src/main.cpp)
+add_executable(main src/main.cpp
+        src/siec/Neuron.cpp
+        src/siec/Neuron.h
+        src/siec/Layer.h
+        src/siec/Layer.cpp
+        src/siec/Matrix.h
+        src/siec/Matrix.cpp
+        src/siec/NeuralNetwork.h
+        src/siec/NeuralNetwork.cpp
+        src/siec/utils/MatrixToVector.h
+        src/siec/utils/MultiplyMatrix.h
+        src/siec/utils/MultiplyMatrix.cpp
+        src/siec/utils/MatrixToVector.cpp)
 target_compile_features(main PRIVATE cxx_std_17)
 target_link_libraries(main PRIVATE SFML::Graphics)
