@@ -44,4 +44,15 @@ Layer::Layer(int size) {
 void Layer::setValue(int i, double v) {
     this->neurons.at(i)->setValue(v);
 }
+std::vector<double> Layer::getActivatedVals() {
+    std::vector<double> ret;
+
+    for(int i = 0; i < this->neurons.size(); i++) {
+        double v = this->neurons.at(i)->getActiveValue();
+
+        ret.push_back(v);
+    }
+
+    return ret;
+}
 

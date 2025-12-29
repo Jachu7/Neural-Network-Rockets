@@ -311,7 +311,7 @@ int main()
     std::vector<int> topology;
     topology.push_back(3);
     topology.push_back(2);
-    topology.push_back(1);
+    topology.push_back(3);
 
     std::vector<double> input;
     input.push_back(1);
@@ -320,7 +320,9 @@ int main()
 
     NeuralNetwork *nn = new NeuralNetwork(topology);
     nn->setCurrentInput(input);
+    nn->setCurrentTarget(input);
     nn->feedForward();
     nn->printToConsole();
+    std::cout<< "Total Error:" << nn->getTotalError() << std::endl;
 
 }

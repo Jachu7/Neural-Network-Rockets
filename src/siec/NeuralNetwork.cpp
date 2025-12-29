@@ -1,6 +1,30 @@
 #include "NeuralNetwork.h"
-
 #include "utils/MultiplyMatrix.h"
+
+void NeuralNetwork::setErrors() {
+    if(this->target.size() == 0) {
+        std::cerr << "No target for this neural network" << std::endl;
+        assert(false);
+    }
+
+    if(this->target.size() != this->layers.at(this->layers.size() - 1)->getNeurons().size()) {
+        std::cerr << "Target size is not the same as output layer size: " << this->layers.at(this->layers.size() - 1)->getNeurons().size() << std::endl;
+        assert(false);
+    }
+
+    this->error = 0.00;
+    int outputLayerIndex = this->layers.size() - 1;
+    std::vector<Neuron *> outputNeurons = this->layers.at(outputLayerIndex)->getNeurons();
+    for(int i = 0; i < target.size(); i++) {
+        double tempErr = (outputNeurons.at(i)->getActiveValue() - target.at(i));
+        errors.at(i) = tempErr;
+        this->error += tempErr;
+    }
+
+    historicalErrors.push_back(this->error);
+}
+
+
 
 void NeuralNetwork::feedForward() {
     for (int i = 0; i < (this->layers.size() - 1); i++) {

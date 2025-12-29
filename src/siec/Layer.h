@@ -15,6 +15,11 @@ public:
     Matrix *matrixifyActivatedVals();
     Matrix *matrixifyDerivedVals();
 
+    std::vector<double> getActivatedVals();
+
+    std::vector<Neuron *> getNeurons() { return this->neurons; };
+    void setNeuron(std::vector<Neuron *> neurons) { this->neurons = neurons; }
+
 private:
     int size;
     std::vector<Neuron *> neurons;

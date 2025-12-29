@@ -1,4 +1,5 @@
 #include "Neuron.h"
+#include <cmath>
 
 void Neuron::setValue(double value) {
     this->value = value;
