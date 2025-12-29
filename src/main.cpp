@@ -12,7 +12,7 @@
 
 struct LaserReading {
     sf::Vector2f endPoint; // Gdzie laser się kończy (do rysowania)
-    float distance;        // Odległość (dla algorytmu genetycznego)
+    float distance;        // Odległość
     bool hit;              // Czy trafił w przeszkodę
 };
 
@@ -204,13 +204,13 @@ int main()
     // config
     bool startowy = true;
     bool nauka = false;
-    auto window = sf::RenderWindow(sf::VideoMode({ 1000u, 1000u }), "Rakietowy algorytm genetyczny");
+    auto window = sf::RenderWindow(sf::VideoMode({ 1000u, 1000u }), "Rakiety AI");
     window.setFramerateLimit(144);
     sf::Font font("../../src/Roboto_Condensed-Medium.ttf"); // Upewnij się, że ścieżka jest poprawna
 
     // tekst
     sf::Text text(font);
-    text.setString("Rakietowy algorytm genetyczny");
+    text.setString("Rakietowy algorytm ai");
     text.setCharacterSize(36);
     text.setFillColor(sf::Color::Black);
     sf::FloatRect textBounds = text.getLocalBounds();
