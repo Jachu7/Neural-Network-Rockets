@@ -543,7 +543,7 @@ std::vector<Rocket> evolve(std::vector<Rocket> &oldPop, sf::Texture &t, sf::Text
 
 int main()
 {
-    auto window = sf::RenderWindow(sf::VideoMode({1000u, 1000u}), "Rakiety AI - Optimized 90%");
+    auto window = sf::RenderWindow(sf::VideoMode({1000u, 1000u}), "Symulacja algorytmu genetycznego - Neural Network Rockets C++");
     window.setFramerateLimit(0);
     sf::Font font;
     if (!font.openFromFile("../../src/Roboto_Condensed-Medium.ttf"))
