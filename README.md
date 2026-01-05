@@ -10,6 +10,15 @@
 
 </div>
 
+## 🎮 Demo
+<p align="center">
+  <img src="images/image.png" alt="Neural Network Rockets Demo" width="700"/>
+</p>
+<p align="center">
+  <em>Rockets learning to navigate through obstacles using evolved neural networks</em>
+</p>
+
+
 ## 📖 About the Project
 
 Neural Network Rockets is a simulation project where autonomous agents (rockets) learn to navigate through an obstacle course to reach a target. The project implements a **Neural Network library from scratch** (without using external AI frameworks like TensorFlow or PyTorch) and utilizes a **Genetic Algorithm** to evolve the population over generations.
