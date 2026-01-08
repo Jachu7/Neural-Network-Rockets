@@ -22,9 +22,6 @@ void NeuralNetwork::feedForward()
 
         if (i != 0)
         {
-            // Musimy zwolnić pamięć po poprzednim matrixifyVals, jeśli matrixify tworzy nowy obiekt
-            // W Twojej implementacji matrixify tworzy 'new Matrix', więc tutaj powstawały wycieki pamięci.
-            // Dla uproszczenia w GA zostawiamy jak jest, ale warto pamiętać o delete.
             Matrix *temp = a;
             a = this->getActivatedNeuronMatrix(i);
             delete temp;

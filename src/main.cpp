@@ -17,7 +17,7 @@
 const int POPULATION_SIZE = 100;      // ilość rakiet
 const int MUTATION_RATE = 5;          // 5%
 const double MUTATION_STRENGTH = 0.1; // 0-1
-const int LIFETIME = 10000;           // Czas trwania rundy
+const int LIFETIME = 2000;           // Czas trwania rundy
 
 const double M_PI_VAL = 3.14159265358979323846;
 
@@ -544,7 +544,7 @@ std::vector<Rocket> evolve(std::vector<Rocket> &oldPop, sf::Texture &t, sf::Text
 int main()
 {
     auto window = sf::RenderWindow(sf::VideoMode({1000u, 1000u}), "Symulacja algorytmu genetycznego - Neural Network Rockets C++");
-    window.setFramerateLimit(0);
+    window.setFramerateLimit(200);
     sf::Font font;
     if (!font.openFromFile("../../src/Roboto_Condensed-Medium.ttf"))
     {
@@ -609,6 +609,7 @@ int main()
 
     int generation = 1;
     int timer = 0;
+    bool showLasers = false;  // Toggle widoku laserów klawiszem L
 
     while (window.isOpen())
     {
@@ -616,6 +617,11 @@ int main()
         {
             if (event->is<sf::Event::Closed>())
                 window.close();
+            if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>())
+            {
+                if (keyPressed->code == sf::Keyboard::Key::L)
+                    showLasers = !showLasers;
+            }
         }
 
         bool allDead = true;
@@ -705,7 +711,27 @@ int main()
             population[i].draw(window, (i == bestIdx));
         }
 
-        textGen.setString("Gen: " + std::to_string(generation) + " | Step: " + std::to_string(timer));
+        // Rysowanie laserów dla każdej żywej rakiety
+        if (showLasers)
+        {
+            for (const auto& rocket : population)
+            {
+                if (rocket.dead)
+                    continue;
+                for (const auto& laser : rocket.lasers)
+                {
+                    sf::Color laserColor = laser.hit ? sf::Color::Red : sf::Color(150, 150, 150, 100);  // Czerwony gdy trafiony, szary gdy nie
+                    sf::Vertex line[] =
+                    {
+                        sf::Vertex{rocket.sprite.getPosition(), laserColor},
+                        sf::Vertex{laser.endPoint, laserColor}
+                    };
+                    window.draw(line, 2, sf::PrimitiveType::Lines);
+                }
+            }
+        }
+
+        textGen.setString("Gen: " + std::to_string(generation) + " | Step: " + std::to_string(timer) + " | [L] toggle raycasts");
         window.draw(textGen);
         window.display();
     }
